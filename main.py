@@ -13,8 +13,10 @@ def divide_list(lst, n):
         lst = lst[amt:]
 
 
-def get_domain(url) -> str:
-    return url.replace('https://', '').replace('http://', '').replace('www.', '').split('/')[0]
+def remove_temp_files():
+    file_names = list(filter(lambda x: 'temp_file_' in x, listdir()))
+    for file_name in file_names:
+        remove(file_name)
 
 
 def check_domain(domain: str, session: Session) -> dict:
@@ -22,17 +24,21 @@ def check_domain(domain: str, session: Session) -> dict:
     redirect_domains = []
 
     try:
-        response = session.get('https://' + domain)
+        url = 'https://' + domain
+        response = session.get(url)
     except exceptions.SSLError:
         try:
-            response = session.get('http://' + domain)
-        except exceptions.SSLError:
+            url = 'http://' + domain
+            response = session.get(url)
+
+        except (exceptions.SSLError, exceptions.ConnectionError):
             return dict(domain=domain, accessible=False, redirect_domains=redirect_domains, status_code=None)
+
     except exceptions.ConnectionError:
         return dict(domain=domain, accessible=False, redirect_domains=redirect_domains, status_code=None)
 
     if response.history:
-        redirect_domains = list(map(lambda x: get_domain(x.url), response.history))
+        redirect_domains = list(filter(lambda x: x[:-1] != url, (map(lambda x: x.url, response.history))))
 
     return dict(
         domain=domain,
@@ -49,11 +55,13 @@ def parse_and_create_temp_files(domains):
     """
     header = Headers(os='win', browser='Chrome', headers=True)
     session = Session()
+    pid = mp.current_process().pid
+    amount = len(domains)
 
-    with open(f'temp_file_{mp.current_process().pid}.csv', 'w') as file:
+    with open(f'temp_file_{pid}.csv', 'w') as file:
         writer = csv.writer(file, delimiter=';')
 
-        for domain in domains:
+        for i, domain in enumerate(domains):
             session.headers.update(header.generate())
             data = check_domain(domain, session)
 
@@ -63,6 +71,7 @@ def parse_and_create_temp_files(domains):
                 ', '.join(data['redirect_domains']) if data['redirect_domains'] else '',
                 data['status_code'] if data['status_code'] else ''
             ])
+            print(f'{pid}: {i}/{amount} {int(i/amount * 100)}%')
 
 
 def collect_data():
@@ -81,7 +90,7 @@ def collect_data():
             remove(file_name)  # Removes temp file after appending its data to result.csv
 
 
-if __name__ == '__main__':
+def run():
     with open('domains.csv', 'r') as file:
         reader = csv.reader(file, delimiter=',')
         domains = list(map(lambda x: x[0], list(reader)[1:]))
@@ -91,3 +100,10 @@ if __name__ == '__main__':
         p.map(parse_and_create_temp_files, list(divide_list(domains, cpus)))
 
     collect_data()
+
+
+if __name__ == '__main__':
+    try:
+        run()
+    except KeyboardInterrupt:
+        remove_temp_files()  # Remove all temp files if program was stopped
