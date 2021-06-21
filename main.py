@@ -5,6 +5,8 @@ from os import listdir, remove
 from fake_headers import Headers
 from requests import Session, exceptions
 
+TIMEOUT = 10
+
 
 def divide_list(lst, n):
     amt = len(lst) // n
@@ -25,16 +27,16 @@ def check_domain(domain: str, session: Session) -> dict:
 
     try:
         url = 'https://' + domain
-        response = session.get(url)
+        response = session.get(url, timeout=TIMEOUT)
     except exceptions.SSLError:
         try:
             url = 'http://' + domain
-            response = session.get(url)
+            response = session.get(url, timeout=TIMEOUT)
 
-        except (exceptions.SSLError, exceptions.ConnectionError):
+        except (exceptions.SSLError, exceptions.ConnectionError, exceptions.Timeout):
             return dict(domain=domain, accessible=False, redirect_domains=redirect_domains, status_code=None)
 
-    except exceptions.ConnectionError:
+    except (exceptions.ConnectionError, exceptions.Timeout):
         return dict(domain=domain, accessible=False, redirect_domains=redirect_domains, status_code=None)
 
     if response.history:
@@ -53,7 +55,7 @@ def parse_and_create_temp_files(domains):
         Temporary files are saved with names in 'temp_file_<ID>.csv' format.
         They will be deleted later automatically.
     """
-    header = Headers(os='win', browser='Chrome', headers=True)
+    header = Headers(os='win', browser='Chrome')
     session = Session()
     pid = mp.current_process().pid
     amount = len(domains)
