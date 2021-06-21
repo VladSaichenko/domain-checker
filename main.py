@@ -33,10 +33,10 @@ def check_domain(domain: str, session: Session) -> dict:
             url = 'http://' + domain
             response = session.get(url, timeout=TIMEOUT)
 
-        except (exceptions.SSLError, exceptions.ConnectionError, exceptions.Timeout):
+        except (exceptions.SSLError, exceptions.ConnectionError, exceptions.Timeout, exceptions.TooManyRedirects):
             return dict(domain=domain, accessible=False, redirect_domains=redirect_domains, status_code=None)
 
-    except (exceptions.ConnectionError, exceptions.Timeout):
+    except (exceptions.ConnectionError, exceptions.Timeout, exceptions.TooManyRedirects):
         return dict(domain=domain, accessible=False, redirect_domains=redirect_domains, status_code=None)
 
     if response.history:
