@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import csv
 import multiprocessing as mp
 from os import listdir, remove
