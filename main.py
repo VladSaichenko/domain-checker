@@ -1,9 +1,12 @@
-#!/usr/bin/python
+<<<<<<< HEAD
+#!/usr/bin/python3
 
+=======
+>>>>>>> parent of 39d9cd5... add header line
 import csv
+import itertools
 import multiprocessing as mp
 from os import listdir, remove
-import itertools
 
 from fake_headers import Headers
 from requests import Session, exceptions
@@ -19,9 +22,9 @@ def divide_list(lst, n):
 
 
 def remove_temp_files():
-    file_names = list(filter(lambda x: 'temp_file_' in x, listdir()))
+    file_names = list(filter(lambda x: 'temp_file_' in x, listdir('output')))
     for file_name in file_names:
-        remove(file_name)
+        remove('/data/output/' + file_name)
 
 
 def check_domain(domain: str, session: Session) -> dict:
@@ -63,7 +66,7 @@ def parse_and_create_temp_files(domains):
     pid = mp.current_process().pid
     amount = len(domains)
 
-    with open(f'temp_file_{pid}.csv', 'w') as file:
+    with open(f'output/temp_file_{pid}.csv', 'w') as file:
         writer = csv.writer(file, delimiter=';')
 
         for i, domain in enumerate(domains):
@@ -81,18 +84,18 @@ def parse_and_create_temp_files(domains):
 
 def collect_data():
     """ Combines data from `temp_file_` files to result.csv """
-    file_names = list(filter(lambda x: 'temp_file_' in x, listdir()))
+    file_names = list(filter(lambda x: 'temp_file_' in x, listdir('output')))
 
-    with open('result.csv', 'w') as file:
+    with open('output/result.csv', 'w') as file:
         writer = csv.writer(file, delimiter=';')
         writer.writerow(['domain', 'domain_status', 'redirected_domains', 'status_code'])
 
         for file_name in file_names:
-            with open(file_name, 'r') as temp_file:
+            with open('output/' + file_name, 'r') as temp_file:
                 reader = csv.reader(temp_file, delimiter=';')
                 for row in reader:
                     writer.writerow(row)
-            remove(file_name)  # Removes temp file after appending its data to result.csv
+            remove('/data/output/' + file_name)  # Removes temp file after appending its data to result.csv
 
 
 def run():
@@ -108,7 +111,5 @@ def run():
 
 
 if __name__ == '__main__':
-    try:
-        run()
-    except KeyboardInterrupt:
-        remove_temp_files()  # Remove all temp files if program was stopped
+    remove_temp_files()
+    run()
