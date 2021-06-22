@@ -1,6 +1,7 @@
 import csv
 import multiprocessing as mp
 from os import listdir, remove
+import itertools
 
 from fake_headers import Headers
 from requests import Session, exceptions
@@ -95,7 +96,7 @@ def collect_data():
 def run():
     with open('domains.csv', 'r') as file:
         reader = csv.reader(file, delimiter=',')
-        domains = list(map(lambda x: x[0], list(reader)[1:]))
+        domains = list(itertools.chain(*list(reader)))[1:]
 
     cpus = mp.cpu_count() * 2 + 1
     with mp.Pool(processes=cpus) as p:
