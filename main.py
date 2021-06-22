@@ -1,12 +1,9 @@
-<<<<<<< HEAD
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-=======
->>>>>>> parent of 39d9cd5... add header line
 import csv
-import itertools
 import multiprocessing as mp
 from os import listdir, remove
+import itertools
 
 from fake_headers import Headers
 from requests import Session, exceptions
@@ -22,12 +19,12 @@ def divide_list(lst, n):
 
 
 def remove_temp_files():
-    file_names = list(filter(lambda x: 'temp_file_' in x, listdir('output')))
+    file_names = list(filter(lambda x: 'temp_file_' in x, listdir()))
     for file_name in file_names:
-        remove('/data/output/' + file_name)
+        remove(file_name)
 
 
-def check_domain(domain: str, session: Session) -> dict:
+def check_domain(domain, session):
     """ Checks the domain and returns a dict object containing information about it """
     redirect_domains = []
 
@@ -66,7 +63,7 @@ def parse_and_create_temp_files(domains):
     pid = mp.current_process().pid
     amount = len(domains)
 
-    with open(f'output/temp_file_{pid}.csv', 'w') as file:
+    with open(f'temp_file_{pid}.csv', 'w') as file:
         writer = csv.writer(file, delimiter=';')
 
         for i, domain in enumerate(domains):
@@ -79,23 +76,23 @@ def parse_and_create_temp_files(domains):
                 ', '.join(data['redirect_domains']) if data['redirect_domains'] else '',
                 data['status_code'] if data['status_code'] else ''
             ])
-            print(f'{pid}: {i}/{amount} {int(i/amount * 100)}%')
+            print(f'{pid}: {i}/{amount} {int(i/amount * 100)}%', flush=True)
 
 
 def collect_data():
     """ Combines data from `temp_file_` files to result.csv """
-    file_names = list(filter(lambda x: 'temp_file_' in x, listdir('output')))
+    file_names = list(filter(lambda x: 'temp_file_' in x, listdir()))
 
-    with open('output/result.csv', 'w') as file:
+    with open('result.csv', 'w') as file:
         writer = csv.writer(file, delimiter=';')
         writer.writerow(['domain', 'domain_status', 'redirected_domains', 'status_code'])
 
         for file_name in file_names:
-            with open('output/' + file_name, 'r') as temp_file:
+            with open(file_name, 'r') as temp_file:
                 reader = csv.reader(temp_file, delimiter=';')
                 for row in reader:
                     writer.writerow(row)
-            remove('/data/output/' + file_name)  # Removes temp file after appending its data to result.csv
+            remove(file_name)  # Removes temp file after appending its data to result.csv
 
 
 def run():
@@ -111,5 +108,7 @@ def run():
 
 
 if __name__ == '__main__':
-    remove_temp_files()
-    run()
+    try:
+        run()
+    except KeyboardInterrupt:
+        remove_temp_files()  # Remove all temp files if program was stopped
