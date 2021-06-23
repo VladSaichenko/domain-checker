@@ -6,7 +6,8 @@ from os import listdir, remove
 import itertools
 
 from fake_headers import Headers
-from requests import Session, exceptions
+from requests import Session
+from requests.exceptions import RequestException, SSLError
 
 TIMEOUT = 10
 
@@ -31,15 +32,15 @@ def check_domain(domain, session):
     try:
         url = 'https://' + domain
         response = session.get(url, timeout=TIMEOUT)
-    except exceptions.SSLError:
+    except SSLError:
         try:
             url = 'http://' + domain
             response = session.get(url, timeout=TIMEOUT)
 
-        except (exceptions.SSLError, exceptions.ConnectionError, exceptions.Timeout, exceptions.TooManyRedirects):
+        except RequestException:
             return dict(domain=domain, accessible=False, redirect_domains=redirect_domains, status_code=None)
 
-    except (exceptions.ConnectionError, exceptions.Timeout, exceptions.TooManyRedirects):
+    except RequestException:
         return dict(domain=domain, accessible=False, redirect_domains=redirect_domains, status_code=None)
 
     if response.history:
