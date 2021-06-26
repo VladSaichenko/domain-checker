@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 
 import csv
+import itertools
 import multiprocessing as mp
 from os import listdir, remove
-import itertools
-
+from time import sleep
+import requests
 from fake_headers import Headers
-from requests import Session
 from requests.exceptions import RequestException, SSLError
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 TIMEOUT = 10
 
@@ -31,11 +34,11 @@ def check_domain(domain, session):
 
     try:
         url = 'https://' + domain
-        response = session.get(url, timeout=TIMEOUT)
+        response = session.get(url, timeout=TIMEOUT, verify=False)
     except SSLError:
         try:
             url = 'http://' + domain
-            response = session.get(url, timeout=TIMEOUT)
+            response = session.get(url, timeout=TIMEOUT, verify=False)
 
         except RequestException:
             return dict(domain=domain, accessible=False, redirect_domains=redirect_domains, status_code=None)
@@ -46,9 +49,12 @@ def check_domain(domain, session):
     if response.history:
         redirect_domains = list(filter(lambda x: x[:-1] != url, (map(lambda x: x.url, response.history))))
 
+    if response.status_code == 430:
+        sleep(2)  # Sleep for 2 seconds if too much requests error
+
     return dict(
         domain=domain,
-        accessible=(response.status_code == 200),
+        accessible=(response.status_code in (200, 430)),
         redirect_domains=redirect_domains,
         status_code=response.status_code
     )
@@ -60,7 +66,7 @@ def parse_and_create_temp_files(domains):
         They will be deleted later automatically.
     """
     header = Headers(os='win', browser='Chrome')
-    session = Session()
+    session = requests.Session()
     pid = mp.current_process().pid
     amount = len(domains)
 
