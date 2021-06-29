@@ -54,7 +54,7 @@ def check_domain(domain, session):
 
     return dict(
         domain=domain,
-        accessible=(response.status_code in (200, 430)),
+        accessible=response.status_code,
         redirect_domains=redirect_domains,
         status_code=response.status_code
     )
