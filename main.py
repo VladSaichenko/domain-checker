@@ -5,6 +5,7 @@ import itertools
 import multiprocessing as mp
 from os import listdir, remove
 from time import sleep
+
 import requests
 from fake_headers import Headers
 from requests.exceptions import RequestException, SSLError
@@ -12,7 +13,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-TIMEOUT = 10
+TIMEOUT = 20
 
 
 def divide_list(lst, n):
@@ -28,22 +29,33 @@ def remove_temp_files():
         remove(file_name)
 
 
-def check_domain(domain, session):
+def check_domain(domain):
     """ Checks the domain and returns a dict object containing information about it """
     redirect_domains = []
+    header = Headers(os='win', browser='Chrome')
 
     try:
         url = 'https://' + domain
-        response = session.get(url, timeout=TIMEOUT, verify=False)
+        response = requests.get(url, timeout=TIMEOUT, verify=False, headers=header.generate())
     except SSLError:
         try:
             url = 'http://' + domain
-            response = session.get(url, timeout=TIMEOUT, verify=False)
-
+            response = requests.get(url, timeout=TIMEOUT, verify=False, headers=header.generate())
         except RequestException:
+            try:
+                url = 'http://www.' + domain
+                response = requests.get(url, timeout=TIMEOUT, verify=False, headers=header.generate())
+                print(url)
+            except Exception:
+                pass
             return dict(domain=domain, accessible=False, redirect_domains=redirect_domains, status_code=None)
-
     except RequestException:
+        try:
+            url = 'https://www.' + domain
+            response = requests.get(url, timeout=TIMEOUT, verify=False, headers=header.generate())
+            print(url)
+        except Exception:
+            pass
         return dict(domain=domain, accessible=False, redirect_domains=redirect_domains, status_code=None)
 
     if response.history:
@@ -65,8 +77,6 @@ def parse_and_create_temp_files(domains):
         Temporary files are saved with names in 'temp_file_<ID>.csv' format.
         They will be deleted later automatically.
     """
-    header = Headers(os='win', browser='Chrome')
-    session = requests.Session()
     pid = mp.current_process().pid
     amount = len(domains)
 
@@ -74,8 +84,7 @@ def parse_and_create_temp_files(domains):
         writer = csv.writer(file, delimiter=';')
 
         for i, domain in enumerate(domains):
-            session.headers.update(header.generate())
-            data = check_domain(domain, session)
+            data = check_domain(domain)
 
             writer.writerow([
                 data['domain'],
